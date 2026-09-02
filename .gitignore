@@ -1,0 +1,21 @@
+# dependencies
+site/node_modules/
+node_modules/
+
+# build output
+site/dist/
+dist/
+
+# logs & tooling
+site/install.log
+tools/log.txt
+*.log
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# scratch
+scratchpad/

@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- THEME TOKENS ---------- */
+:root {
+  --bg: #faf5ec;
+  --bg-2: #f3ead9;
+  --panel: #ffffff;
+  --panel-2: #f7efe2;
+  --line: rgba(60, 42, 28, 0.14);
+  --text: #241a14;
+  --text-2: #6b5747;
+  --text-3: #9a8672;
+  --accent: #a3652c;
+  --accent-2: #c9974a;
+  --gold: #b8863d;
+  --shadow: 0 30px 60px -30px rgba(60, 40, 24, 0.35);
+  --card-cookie-bg: radial-gradient(120% 120% at 50% 20%, #1a1310 0%, #0d0a08 70%);
+  color-scheme: light;
+}
+html.dark {
+  --bg: #0a0806;
+  --bg-2: #0f0b09;
+  --panel: #14100d;
+  --panel-2: #1a1411;
+  --line: rgba(220, 180, 120, 0.12);
+  --text: #f3ead9;
+  --text-2: #b6a48d;
+  --text-3: #7c6b58;
+  --accent: #dcae63;
+  --accent-2: #e9c887;
+  --gold: #dcae63;
+  --shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.8);
+  --card-cookie-bg: radial-gradient(120% 120% at 50% 18%, #171210 0%, #090706 72%);
+  color-scheme: dark;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+html { scroll-behavior: auto; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1), color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+::selection { background: var(--accent); color: #0a0806; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--cocoa-600, #5a4132); border-radius: 20px; border: 3px solid var(--bg); }
+
+/* ---------- TYPE ---------- */
+.font-display { font-family: 'Cormorant Garamond', Georgia, serif; }
+.eyebrow {
+  font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--accent); font-weight: 500;
+}
+.h-hero {
+  font-family: 'Cormorant Garamond', serif; font-weight: 500;
+  line-height: 0.94; letter-spacing: -0.01em;
+  font-size: clamp(2.6rem, 9vw, 8.2rem);
+}
+.h-section {
+  font-family: 'Cormorant Garamond', serif; font-weight: 500;
+  line-height: 1.0; letter-spacing: -0.01em;
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
+}
+
+/* ---------- SURFACES ---------- */
+.panel { background: var(--panel); border: 1px solid var(--line); }
+.cookie-surface { background: var(--card-cookie-bg); }
+.hairline { border-color: var(--line); }
+.text-2 { color: var(--text-2); }
+.text-3 { color: var(--text-3); }
+.text-accent { color: var(--accent); }
+
+/* frosted */
+.glass {
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--line);
+}
+
+/* ---------- BUTTONS ---------- */
+.btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.6rem; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 500; padding: 0.95rem 1.7rem; border-radius: 999px; cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.16,1,0.3,1), background 0.4s, color 0.4s, box-shadow 0.4s;
+  will-change: transform; user-select: none; border: 1px solid transparent;
+}
+.btn-primary { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #17100a; box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--accent) 70%, transparent); }
+.btn-primary:hover { box-shadow: 0 18px 44px -14px color-mix(in srgb, var(--accent) 85%, transparent); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+.btn-ghost:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); color: var(--accent); }
+.btn-solid { background: var(--text); color: var(--bg); }
+
+/* magnetic */
+.magnetic { display: inline-block; will-change: transform; }
+
+/* underline links */
+.link-underline { position: relative; }
+.link-underline::after {
+  content: ''; position: absolute; left: 0; bottom: -3px; height: 1px; width: 100%;
+  background: currentColor; transform: scaleX(0); transform-origin: right;
+  transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+.link-underline:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* ---------- REVEAL ---------- */
+.reveal { opacity: 0; transform: transl3d(0,0,0); }
+[data-reveal] { opacity: 0; transform: translateY(28px); }
+.reveal-line { display: block; overflow: hidden; padding-bottom: 0.04em; }
+.reveal-line > span { display: block; transform: translateY(110%); }
+
+/* hero intro (CSS-transition driven — set .shown on root) */
+.hero-root .reveal-line > span {
+  transform: translateY(110%);
+  transition: transform 1.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hero-root.shown .reveal-line > span { transform: translateY(0); }
+.hero-root .hero-fade {
+  opacity: 0; transform: translateY(22px);
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hero-root.shown .hero-fade { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .hero-root .reveal-line > span { transform: none !important; }
+  .hero-root .hero-fade { opacity: 1 !important; transform: none !important; }
+}
+
+/* ---------- GRAIN + FX ---------- */
+.grain-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: 0.05;
+  background-image: url('/assets/img/grain.webp'); background-size: 340px; mix-blend-mode: overlay;
+}
+html.dark .grain-overlay { opacity: 0.08; mix-blend-mode: soft-light; }
+
+.screen-glow { mix-blend-mode: screen; pointer-events: none; }
+
+/* cookie image sits on dark cards -> black bg blends */
+.cookie-img { mix-blend-mode: normal; }
+html:not(.dark) .on-cream-card .cookie-img { mix-blend-mode: normal; }
+
+/* shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-2) 37%, var(--panel) 63%);
+  background-size: 400% 100%;
+}
+
+/* hide native focus ring but keep for keyboard */
+:focus:not(:focus-visible) { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+
+/* marquee */
+.marquee-track { display: inline-flex; white-space: nowrap; will-change: transform; }
+
+/* no-scroll utility for modals when lenis absent */
+body.no-scroll { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.12s !important; }
+}
