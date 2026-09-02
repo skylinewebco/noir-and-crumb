@@ -1,34 +1,44 @@
 import { useRef, useMemo, Suspense, useState, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useTexture, AdaptiveDpr, PerformanceMonitor } from '@react-three/drei'
+import { useTexture, PerformanceMonitor } from '@react-three/drei'
 import * as THREE from 'three'
 import { useIsMobile } from '../hooks'
 
 /* -------------------------------------------------------------------------
-   Shared, render-free state (no React re-renders per frame)
+   Shared, render-free state (no React re-renders per frame).
    - pointer: normalized mouse (-1..1), fed from a window listener so the
      canvas can stay pointer-events:none and never block clicks.
-   - scroll:  live scroll metrics, read straight from the DOM each frame.
+   - scroll:  live scroll metrics. `vh` is cached (updated on resize only) so
+     we never force a layout read inside the render loop. `jS`/`heroS` are the
+     temporally-smoothed values the visuals actually use — this removes any
+     jitter caused by the R3F loop sampling scroll on a different rAF tick
+     than Lenis writes it.
 --------------------------------------------------------------------------- */
 const pointer = { x: 0, y: 0, tx: 0, ty: 0 }
-const scroll = { y: 0, vh: 1, journey: 0, hero: 0 }
-
-function readScroll() {
-  scroll.y = window.scrollY || window.pageYOffset || 0
-  scroll.vh = window.innerHeight || 1
-  scroll.journey = scroll.y / scroll.vh // 0 at top, 1 after one viewport…
-  scroll.hero = Math.min(1, scroll.journey)
-}
+let vhCache = typeof window !== 'undefined' ? window.innerHeight || 1 : 1
+const scroll = { y: 0, journey: 0, jS: 0, heroS: 0 }
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v)
+
+/* Runs first each frame: reads scroll cheaply and smooths it once. */
+function ScrollDriver() {
+  useFrame((_, dtRaw) => {
+    const dt = dtRaw > 0.05 ? 0.05 : dtRaw
+    scroll.y = window.scrollY || window.pageYOffset || 0
+    scroll.journey = scroll.y / vhCache
+    // critically-smoothed follow — kills cross-loop micro-jitter, keeps travel fluid
+    const k = 1 - Math.pow(0.0016, dt) // ~time-based lerp, frame-rate independent
+    scroll.jS += (scroll.journey - scroll.jS) * k
+    scroll.heroS = scroll.jS < 1 ? scroll.jS : 1
+  })
+  return null
+}
 
 /* ---------- the real 3D cookie (textured disc with a baked rim) ---------- */
 function Cookie({ mobile }) {
   const group = useRef()
   const tex = useTexture('./assets/img/hero-cookie.webp')
 
-  // caps: zoom the UVs slightly so the disc samples only the solid cookie
-  // interior (avoids transparent-corner holes at the rim).
   const capTex = useMemo(() => {
     const t = tex.clone()
     t.colorSpace = THREE.SRGBColorSpace
@@ -42,13 +52,12 @@ function Cookie({ mobile }) {
   const backTex = useMemo(() => {
     const t = capTex.clone()
     t.center.set(0.5, 0.5)
-    t.repeat.set(-0.74, 0.74) // mirror so the "underside" isn't an exact copy
+    t.repeat.set(-0.74, 0.74)
     t.offset.set(1, 0)
     t.needsUpdate = true
     return t
   }, [capTex])
 
-  // baked rim gradient => reads as a rounded, front-lit cookie edge
   const rimTex = useMemo(() => {
     const c = document.createElement('canvas')
     c.width = 8; c.height = 128
@@ -66,65 +75,66 @@ function Cookie({ mobile }) {
   }, [])
 
   const materials = useMemo(() => ([
-    new THREE.MeshBasicMaterial({ map: rimTex, transparent: true, toneMapped: false }),        // side
-    new THREE.MeshBasicMaterial({ map: capTex, transparent: true, toneMapped: false }),         // top (front)
-    new THREE.MeshBasicMaterial({ map: backTex, transparent: true, toneMapped: false, color: '#d9c3a1' }), // bottom (back)
+    new THREE.MeshBasicMaterial({ map: rimTex, transparent: true, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ map: capTex, transparent: true, toneMapped: false }),
+    new THREE.MeshBasicMaterial({ map: backTex, transparent: true, toneMapped: false, color: '#d9c3a1' }),
   ]), [rimTex, capTex, backTex])
 
-  // spring-integrated rotation state (for inertia / momentum)
   const rot = useRef({ yaw: 0, yawV: 0, pitch: 0.06, pitchV: 0 })
-  const MAX_YAW = mobile ? 0.6 : 1.65   // ~95° on desktop -> reveals side & back
+  const lastOp = useRef(1)
+  const MAX_YAW = mobile ? 0.6 : 1.65
   const MAX_PITCH = mobile ? 0.45 : 1.15
 
   useFrame((state, dtRaw) => {
     const g = group.current
     if (!g) return
-    readScroll()
     const t = state.clock.elapsedTime
-    const dt = Math.min(dtRaw, 0.033) // clamp for spring stability
-    const j = scroll.journey
+    const dt = dtRaw > 0.033 ? 0.033 : dtRaw
+    const j = scroll.jS // smoothed journey
 
-    // --- ease pointer, then drive rotation with a damped spring (inertia) ---
-    pointer.x += (pointer.tx - pointer.x) * Math.min(1, dt * 6)
-    pointer.y += (pointer.ty - pointer.y) * Math.min(1, dt * 6)
+    // ease pointer, then drive rotation with a damped spring (inertia)
+    const pe = dt * 6
+    pointer.x += (pointer.tx - pointer.x) * (pe < 1 ? pe : 1)
+    pointer.y += (pointer.ty - pointer.y) * (pe < 1 ? pe : 1)
 
     const targetYaw = pointer.x * MAX_YAW
     const targetPitch = 0.06 - pointer.y * MAX_PITCH
-    const stiffness = 120, damping = 15 // slightly under-damped => gentle momentum
+    const stiffness = 120, damping = 15
     const r = rot.current
     r.yawV += ((targetYaw - r.yaw) * stiffness - r.yawV * damping) * dt
     r.yaw += r.yawV * dt
     r.pitchV += ((targetPitch - r.pitch) * stiffness - r.pitchV * damping) * dt
     r.pitch += r.pitchV * dt
 
-    // --- compose: interaction + idle life + scroll-driven tumble ---
+    // compose: interaction + idle life + scroll-driven tumble
     const fall = mobile ? 3.0 : 3.4
     g.rotation.y = r.yaw + j * 0.35
     g.rotation.x = r.pitch + Math.sin(t * 0.6) * 0.04 + j * (mobile ? 1.7 : 2.1)
     g.rotation.z = Math.sin(t * 0.35) * 0.03 + j * 0.6
 
-    // --- position: idle float in hero, then travel down & drift aside ---
     const baseY = mobile ? -1.3 : 0
     g.position.y = baseY + Math.sin(t * 0.7) * 0.08 - j * fall
-    g.position.x = (mobile ? 0 : 0.0) + j * (mobile ? 0.5 : 1.5)
-    g.position.z = -j * 0.6 // recede slightly for depth
+    g.position.x = j * (mobile ? 0.5 : 1.5)
+    g.position.z = -j * 0.9 // recede for depth (compensates the removed blur)
 
-    // --- scale shrinks a touch as it travels ---
     const base = mobile ? 1.75 : 2.75
-    g.scale.setScalar(base * (1 - clamp01(j) * 0.26))
+    g.scale.setScalar(base * (1 - clamp01(j) * 0.3))
 
-    // --- opacity: full through hero, fade out as it leaves ---
+    // opacity: full through hero, fade out as it leaves (write only on change)
     const op = clamp01(1 - (j - 0.7) / 1.7)
-    materials[0].opacity = op
-    materials[1].opacity = op
-    materials[2].opacity = op
+    if (op !== lastOp.current) {
+      materials[0].opacity = op
+      materials[1].opacity = op
+      materials[2].opacity = op
+      g.visible = op > 0.001
+      lastOp.current = op
+    }
   })
 
   return (
     <group ref={group}>
-      {/* cylinder groups => [side, top, bottom]; base x=PI/2 faces caps to camera */}
       <mesh rotation={[Math.PI / 2, 0, 0]} material={materials}>
-        <cylinderGeometry args={[0.5, 0.5, 0.14, 72, 1, false]} />
+        <cylinderGeometry args={[0.5, 0.5, 0.14, 64, 1, false]} />
       </mesh>
     </group>
   )
@@ -135,7 +145,10 @@ function Glow() {
   const tex = useTexture('./assets/img/glow.webp')
   const ref = useRef()
   useFrame((state) => {
-    if (ref.current) ref.current.material.opacity = Math.max(0, 0.5 + Math.sin(state.clock.elapsedTime * 0.8) * 0.08 - scroll.hero * 0.55)
+    if (!ref.current) return
+    const o = 0.5 + Math.sin(state.clock.elapsedTime * 0.8) * 0.08 - scroll.heroS * 0.55
+    ref.current.material.opacity = o > 0 ? o : 0
+    ref.current.visible = o > 0.001
   })
   return (
     <mesh ref={ref} position={[0, 0, -1.4]} scale={9}>
@@ -172,14 +185,20 @@ function Particles({ count = 130 }) {
   useFrame((state, dt) => {
     const pts = ref.current
     if (!pts) return
-    const op = 0.7 - scroll.hero * 0.7
+    const op = 0.7 - scroll.heroS * 0.7
+    if (op <= 0.001) {
+      if (pts.visible) { pts.visible = false; pts.material.opacity = 0 }
+      return // fully faded past the hero -> no buffer work, no draw
+    }
+    pts.visible = true
     pts.material.opacity = op
-    if (op <= 0.001) return // fully faded -> skip position work
     const arr = pts.geometry.attributes.position.array
+    const et = state.clock.elapsedTime
     for (let i = 0; i < count; i++) {
-      arr[i * 3 + 1] += speeds[i] * dt
-      arr[i * 3] += Math.sin(state.clock.elapsedTime * 0.3 + i) * dt * 0.05
-      if (arr[i * 3 + 1] > 4.6) arr[i * 3 + 1] = -4.6
+      const iy = i * 3 + 1
+      arr[iy] += speeds[i] * dt
+      arr[i * 3] += Math.sin(et * 0.3 + i) * dt * 0.05
+      if (arr[iy] > 4.6) arr[iy] = -4.6
     }
     pts.geometry.attributes.position.needsUpdate = true
     pts.rotation.y = pointer.x * 0.15
@@ -198,24 +217,24 @@ function Particles({ count = 130 }) {
 function Rig() {
   const { camera } = useThree()
   useFrame((_, dt) => {
-    const px = pointer.x * 0.35
-    const py = pointer.y * 0.22
-    camera.position.x += (px - camera.position.x) * Math.min(1, dt * 2)
-    camera.position.y += (py - camera.position.y) * Math.min(1, dt * 2)
+    const s = dt * 2 < 1 ? dt * 2 : 1
+    camera.position.x += (pointer.x * 0.35 - camera.position.x) * s
+    camera.position.y += (pointer.y * 0.22 - camera.position.y) * s
     camera.lookAt(0, 0, 0)
   })
   return null
 }
 
-function SceneContents({ mobile }) {
-  const [dpr, setDpr] = useState(mobile ? 1.3 : 1.75)
+function SceneContents({ mobile, setDpr, maxDpr }) {
   return (
     <>
+      {/* adaptive DPR — actually wired to the Canvas dpr now, so it drops
+          resolution under sustained load and restores it when there's headroom */}
       <PerformanceMonitor
-        onDecline={() => setDpr((d) => Math.max(1, d - 0.35))}
-        onIncline={() => setDpr((d) => Math.min(mobile ? 1.4 : 2, d + 0.2))}
+        onDecline={() => setDpr((d) => Math.max(1, +(d - 0.25).toFixed(2)))}
+        onIncline={() => setDpr((d) => Math.min(maxDpr, +(d + 0.15).toFixed(2)))}
       />
-      <AdaptiveDpr pixelated={false} />
+      <ScrollDriver />
       <Suspense fallback={null}>
         <Glow />
         <Cookie mobile={mobile} />
@@ -230,9 +249,9 @@ export default function CookieField() {
   const mobile = useIsMobile()
   const [failed, setFailed] = useState(false)
   const [active, setActive] = useState(true)
-  const wrapRef = useRef(null)
+  const [dpr, setDpr] = useState(mobile ? 1.25 : 1.6)
+  const maxDpr = mobile ? 1.4 : 1.9
 
-  // webgl support
   useEffect(() => {
     try {
       const c = document.createElement('canvas')
@@ -252,29 +271,25 @@ export default function CookieField() {
     return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerout', onLeave) }
   }, [])
 
-  // only render while the cookie is still within its journey (top ~2.6 vh),
-  // and add a gentle depth-of-field blur as it recedes into the page.
+  // Pause the render loop once the cookie has left (perf), and cache viewport
+  // height so the render loop never triggers a layout read. No per-frame DOM
+  // writes here — the previous CSS blur was removed (it was the main jank).
   useEffect(() => {
     let ticking = false
     const apply = () => {
       ticking = false
-      const vh = window.innerHeight || 1
-      const j = (window.scrollY || 0) / vh
-      const shouldRender = j < 2.65
+      const j = (window.scrollY || 0) / vhCache
+      const shouldRender = j < 2.5
       setActive((prev) => (prev !== shouldRender ? shouldRender : prev))
-      if (wrapRef.current) {
-        const blur = j > 1 ? Math.min(6, (j - 1) * 4) : 0
-        wrapRef.current.style.filter = blur ? `blur(${blur.toFixed(2)}px)` : 'none'
-      }
     }
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(apply) } }
+    const onResize = () => { vhCache = window.innerHeight || 1; apply() }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', onResize)
     apply()
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll) }
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onResize) }
   }, [])
 
-  // graceful fallback: static cookie pinned to the hero
   if (failed) {
     return (
       <div className="fixed inset-0 z-[3] pointer-events-none flex items-start justify-center">
@@ -285,17 +300,18 @@ export default function CookieField() {
   }
 
   return (
-    <div ref={wrapRef} className="fixed inset-0 z-[3] pointer-events-none will-change-[filter]">
+    <div className="fixed inset-0 z-[3] pointer-events-none" style={{ contain: 'layout paint' }}>
       <Canvas
         className="!fixed inset-0"
         style={{ pointerEvents: 'none' }}
-        dpr={mobile ? [1, 1.4] : [1, 1.9]}
+        dpr={dpr}
         gl={{ antialias: !mobile, alpha: true, powerPreference: 'high-performance', stencil: false, depth: true }}
         camera={{ position: [0, 0, 6], fov: 42 }}
         frameloop={active ? 'always' : 'never'}
+        performance={{ min: 0.5 }}
         onCreated={({ gl }) => { gl.setClearColor(0x000000, 0) }}
       >
-        <SceneContents mobile={mobile} />
+        <SceneContents mobile={mobile} setDpr={setDpr} maxDpr={maxDpr} />
       </Canvas>
     </div>
   )
