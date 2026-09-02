@@ -1,10 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { scrollTo } from '../lib/smooth'
 import { Icon } from '../components/primitives'
 import { useReducedMotion } from '../hooks'
-
-const HeroScene = lazy(() => import('../three/HeroScene'))
 
 export default function Hero() {
   const ready = useStore((s) => s.ready)
@@ -30,10 +28,9 @@ export default function Hero() {
         <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 90% at 50% 32%, transparent 34%, #0a0806 86%)' }} />
       </div>
 
-      {/* 3D cookie */}
-      {!reduced ? (
-        <Suspense fallback={null}><HeroScene /></Suspense>
-      ) : (
+      {/* 3D cookie is rendered by the global <CookieField/> (fixed layer) so it can
+          travel down through the page on scroll. Static fallback only when reduced-motion. */}
+      {reduced && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
           <img src="./assets/img/hero-cookie.webp" alt="Signature cookie" className="w-[70vw] max-w-[520px]" />
         </div>

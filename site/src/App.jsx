@@ -1,6 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, lazy, Suspense } from 'react'
 import { useStore } from './store/useStore'
 import { initSmoothScroll, ScrollTrigger } from './lib/smooth'
+import { useReducedMotion } from './hooks'
+
+const CookieField = lazy(() => import('./three/CookieField'))
 
 import Preloader from './components/Preloader'
 import Navbar from './components/Navbar'
@@ -45,6 +48,7 @@ function ProgressBar() {
 export default function App() {
   const theme = useStore((s) => s.theme)
   const ready = useStore((s) => s.ready)
+  const reduced = useReducedMotion()
 
   // theme -> <html> class
   useEffect(() => {
@@ -74,6 +78,10 @@ export default function App() {
   return (
     <>
       <Preloader />
+      {/* global 3D cookie that lives in the hero and travels down the page on scroll */}
+      {ready && !reduced && (
+        <Suspense fallback={null}><CookieField /></Suspense>
+      )}
       <div className="grain-overlay" aria-hidden />
       <ProgressBar />
       <Navbar />
