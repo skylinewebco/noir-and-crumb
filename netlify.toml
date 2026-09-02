@@ -1,0 +1,19 @@
+# Netlify build config — the app lives in the /site subfolder (Vite + React).
+# Without this, Netlify builds/serves from the repo root (which has no
+# index.html) and returns a 404.
+
+[build]
+  base = "site"            # cd into /site before building (finds package.json)
+  command = "npm run build" # Vite production build
+  publish = "dist"          # resolved relative to base -> site/dist
+
+[build.environment]
+  NODE_VERSION = "20"       # Vite 5 needs Node 18+; pin an LTS
+
+# Single-page site (no client-side router): serve index.html for any path so a
+# direct visit or refresh never 404s. Existing static files (assets) are served
+# first; only unknown paths fall through to index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
