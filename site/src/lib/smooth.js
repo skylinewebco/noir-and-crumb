@@ -3,7 +3,6 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
-if (typeof window !== 'undefined') window.gsap = gsap
 
 let lenis = null
 // live scroll progress (0..1 of hero height) shared with the 3D scene without React re-renders

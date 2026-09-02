@@ -3,18 +3,18 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture, PerformanceMonitor } from '@react-three/drei'
 import * as THREE from 'three'
 import { useIsMobile } from '../hooks'
+import { pointer, setTargetFromClient, resetTarget } from './cookieInput'
 
 /* -------------------------------------------------------------------------
    Shared, render-free state (no React re-renders per frame).
-   - pointer: normalized mouse (-1..1), fed from a window listener so the
-     canvas can stay pointer-events:none and never block clicks.
+   - pointer: normalized rotation target (-1..1), written by the window mouse
+     listener (desktop) and the CookieTouchZone (mobile drag).
    - scroll:  live scroll metrics. `vh` is cached (updated on resize only) so
      we never force a layout read inside the render loop. `jS`/`heroS` are the
      temporally-smoothed values the visuals actually use — this removes any
      jitter caused by the R3F loop sampling scroll on a different rAF tick
      than Lenis writes it.
 --------------------------------------------------------------------------- */
-const pointer = { x: 0, y: 0, tx: 0, ty: 0 }
 let vhCache = typeof window !== 'undefined' ? window.innerHeight || 1 : 1
 const scroll = { y: 0, journey: 0, jS: 0, heroS: 0 }
 
@@ -112,7 +112,10 @@ function Cookie({ mobile }) {
     g.rotation.x = r.pitch + Math.sin(t * 0.6) * 0.04 + j * (mobile ? 1.7 : 2.1)
     g.rotation.z = Math.sin(t * 0.35) * 0.03 + j * 0.6
 
-    const baseY = mobile ? -1.3 : 0
+    // responsive hero placement: on mobile sit the cookie in the upper-centre
+    // of the frame (~40% from top) regardless of screen height/aspect, using
+    // the camera viewport rather than a hard-coded value.
+    const baseY = mobile ? state.viewport.height * 0.1 : 0
     g.position.y = baseY + Math.sin(t * 0.7) * 0.08 - j * fall
     g.position.x = j * (mobile ? 0.5 : 1.5)
     g.position.z = -j * 0.9 // recede for depth (compensates the removed blur)
@@ -259,13 +262,12 @@ export default function CookieField() {
     } catch { setFailed(true) }
   }, [])
 
-  // global pointer (window-level so the canvas can be pointer-events:none)
+  // desktop mouse (window-level so the canvas can be pointer-events:none).
+  // Mouse only — touch rotation is handled by <CookieTouchZone/> so it never
+  // fights page scrolling. Ignore coarse pointers here.
   useEffect(() => {
-    const onMove = (e) => {
-      pointer.tx = (e.clientX / window.innerWidth) * 2 - 1
-      pointer.ty = -((e.clientY / window.innerHeight) * 2 - 1)
-    }
-    const onLeave = () => { pointer.tx = 0; pointer.ty = 0 }
+    const onMove = (e) => { if (e.pointerType !== 'touch') setTargetFromClient(e.clientX, e.clientY) }
+    const onLeave = (e) => { if (e.pointerType !== 'touch') resetTarget() }
     window.addEventListener('pointermove', onMove, { passive: true })
     window.addEventListener('pointerout', onLeave, { passive: true })
     return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerout', onLeave) }

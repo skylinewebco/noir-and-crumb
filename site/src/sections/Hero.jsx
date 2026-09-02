@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { scrollTo } from '../lib/smooth'
 import { Icon } from '../components/primitives'
 import { useReducedMotion } from '../hooks'
+import { prime, tryPlay } from '../lib/video'
+import CookieTouchZone from '../components/CookieTouchZone'
 
 export default function Hero() {
+  const navigate = useNavigate()
   const ready = useStore((s) => s.ready)
   const reduced = useReducedMotion()
   const [shown, setShown] = useState(false)
@@ -21,6 +25,7 @@ export default function Hero() {
       <div className="absolute inset-0 -z-10 bg-[#0a0806]">
         <img src="./assets/img/bg-studio.webp" alt="" className="w-full h-full object-cover opacity-90" />
         <video
+          ref={(el) => { if (el) { prime(el); tryPlay(el) } }}
           className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-screen"
           src="./assets/video/hero.mp4" poster="./assets/img/poster-hero.webp"
           muted playsInline loop autoPlay preload="metadata" aria-hidden
@@ -39,6 +44,9 @@ export default function Hero() {
       {/* mobile scrim for text legibility over the cookie */}
       <div className="absolute inset-0 z-[5] lg:hidden pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(10,8,6,0.82) 0%, rgba(10,8,6,0.35) 42%, rgba(10,8,6,0.55) 72%, rgba(10,8,6,0.9) 100%)' }} />
 
+      {/* mobile drag-to-rotate layer (below CTAs, above the cookie canvas) */}
+      <CookieTouchZone />
+
       {/* content — wrapper ignores pointer so canvas gets parallax; interactive bits re-enable */}
       <div className="relative z-10 w-full pointer-events-none text-cream-50">
         <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
@@ -53,7 +61,7 @@ export default function Hero() {
               Premium ingredients. Bold, quiet flavour. Each cookie pulled warm from the oven and shipped within the day.
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-9">
-              <button onClick={() => scrollTo('#collection')} className="hero-fade btn btn-primary pointer-events-auto" style={{ transitionDelay: '.42s' }}>
+              <button onClick={() => navigate('/shop')} className="hero-fade btn btn-primary pointer-events-auto" style={{ transitionDelay: '.42s' }}>
                 Shop Cookies <Icon.Arrow width={16} height={16} />
               </button>
               <button onClick={() => scrollTo('#featured')} className="hero-fade btn btn-ghost pointer-events-auto !text-cream-100 border-white/20" style={{ transitionDelay: '.5s' }}>

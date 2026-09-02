@@ -1,14 +1,15 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
-import { scrollTo } from '../lib/smooth'
 import { Icon } from '../components/primitives'
 
 const COLS = [
-  { title: 'Shop', links: [['Signature', '#featured'], ['Collection', '#collection'], ['Gift Boxes', '#gifting'], ['Ingredients', '#ingredients']] },
-  { title: 'Brand', links: [['Our Story', '#story'], ['Reviews', '#top'], ['Contact', '#contact'], ['Wholesale', '#contact']] },
+  { title: 'Shop', links: [['Cookies', '/shop'], ['Collection', '/shop'], ['Gift Boxes', '/shop'], ['Ingredients', '/about']] },
+  { title: 'Brand', links: [['Home', '/'], ['Our Story', '/about'], ['Experience', '/experience'], ['Contact', '/contact']] },
 ]
 
 export default function Footer() {
+  const navigate = useNavigate()
   const toast = useStore((s) => s.toast)
   const [email, setEmail] = useState('')
   const sub = (e) => {
@@ -39,7 +40,7 @@ export default function Footer() {
               <div className="eyebrow !text-[var(--gold)] mb-4">{c.title}</div>
               <ul className="space-y-2.5">
                 {c.links.map(([l, to]) => (
-                  <li key={l}><button onClick={() => scrollTo(to)} className="text-cream-300/70 hover:text-[var(--gold)] transition text-sm link-underline">{l}</button></li>
+                  <li key={l}><button onClick={() => navigate(to)} className="text-cream-300/70 hover:text-[var(--gold)] transition text-sm link-underline">{l}</button></li>
                 ))}
               </ul>
             </div>

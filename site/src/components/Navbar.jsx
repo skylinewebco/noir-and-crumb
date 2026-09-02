@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useStore, cartCount } from '../store/useStore'
-import { scrollTo } from '../lib/smooth'
 import { Icon, Magnetic } from './primitives'
 
 const LINKS = [
-  { label: 'Collection', to: '#collection' },
-  { label: 'Ingredients', to: '#ingredients' },
-  { label: 'Story', to: '#story' },
-  { label: 'Gifting', to: '#gifting' },
-  { label: 'Contact', to: '#contact' },
+  { label: 'Home', to: '/' },
+  { label: 'Shop', to: '/shop' },
+  { label: 'About', to: '/about' },
+  { label: 'Experience', to: '/experience' },
+  { label: 'Contact', to: '/contact' },
 ]
 
 export default function Navbar() {
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
   const openUI = useStore((s) => s.openUI)
@@ -49,7 +51,7 @@ export default function Navbar() {
     )
   }, [count])
 
-  const go = (to) => { setMenu(false); scrollTo(to) }
+  const go = (to) => { setMenu(false); navigate(to) }
 
   return (
     <>
@@ -59,7 +61,7 @@ export default function Navbar() {
         <div className={`transition-all duration-500 ${solid ? 'glass shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5)]' : 'bg-transparent'}`}>
           <nav className="mx-auto max-w-[1400px] px-5 sm:px-8 h-16 sm:h-[74px] flex items-center justify-between gap-4">
             {/* logo */}
-            <button onClick={() => scrollTo('#top')} className="flex items-center gap-2.5 group shrink-0" aria-label="Noir and Crumb home">
+            <button onClick={() => go('/')} className="flex items-center gap-2.5 group shrink-0" aria-label="Noir and Crumb home">
               <img src="./assets/img/logo.webp" alt="" className="h-8 sm:h-9 w-auto" style={{ filter: theme === 'dark' ? 'none' : 'brightness(0.55) saturate(1.2)' }} />
               <span className="font-display text-lg sm:text-xl leading-none tracking-tight hidden xs:block sm:block">Noir&nbsp;<span className="text-accent">&amp;</span>&nbsp;Crumb</span>
             </button>
@@ -67,7 +69,7 @@ export default function Navbar() {
             {/* links */}
             <div className="hidden lg:flex items-center gap-8 text-[0.82rem] tracking-wide2 uppercase text-2">
               {LINKS.map((l) => (
-                <button key={l.to} onClick={() => go(l.to)} className="link-underline hover:text-accent transition-colors">{l.label}</button>
+                <button key={l.to} onClick={() => go(l.to)} className={`link-underline transition-colors ${pathname === l.to ? 'text-accent' : 'hover:text-accent'}`}>{l.label}</button>
               ))}
             </div>
 
@@ -103,8 +105,11 @@ export default function Navbar() {
         <div className={`absolute top-0 right-0 h-full w-[82%] max-w-[360px] panel border-l flex flex-col pt-24 px-8 transition-transform duration-500 ease-luxe ${menu ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="eyebrow mb-6">Menu</div>
           <div className="flex flex-col gap-1">
-            {LINKS.map((l, i) => (
-              <button key={l.to} onClick={() => go(l.to)} className="text-left font-display text-3xl py-2.5 hairline border-b hover:text-accent transition-colors">{l.label}</button>
+            {LINKS.map((l) => (
+              <button key={l.to} onClick={() => go(l.to)} className={`text-left font-display text-3xl py-2.5 hairline border-b transition-colors flex items-center justify-between ${pathname === l.to ? 'text-accent' : 'hover:text-accent'}`}>
+                {l.label}
+                {pathname === l.to && <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />}
+              </button>
             ))}
           </div>
           <button onClick={() => { setMenu(false); openUI('auth') }} className="btn btn-ghost mt-8 justify-center">

@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore, cartTotal, cartCount, lineKey, linePrice } from '../store/useStore'
 import { CUSTOMIZE } from '../data/products'
 import { Icon } from './primitives'
-import { scrollTo } from '../lib/smooth'
 
 const desc = (i) => {
   const size = CUSTOMIZE.size.find((s) => s.key === i.size)?.label
@@ -12,6 +12,7 @@ const desc = (i) => {
 }
 
 export default function CartDrawer() {
+  const navigate = useNavigate()
   const open = useStore((s) => s.ui.cart)
   const openUI = useStore((s) => s.openUI)
   const cart = useStore((s) => s.cart)
@@ -49,7 +50,7 @@ export default function CartDrawer() {
               <div className="font-display text-2xl mb-1">Your box is empty</div>
               <p className="text-3 text-sm">Warm, small-batch cookies are waiting.</p>
             </div>
-            <button onClick={() => { openUI('cart', false); scrollTo('#collection') }} className="btn btn-primary">Explore Cookies</button>
+            <button onClick={() => { openUI('cart', false); navigate('/shop') }} className="btn btn-primary">Explore Cookies</button>
           </div>
         ) : (
           <>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { prime, tryPlay } from '../lib/video'
 
 /**
- * Performance-first looping video:
- * - src only attaches when near viewport (saves bandwidth / decode)
+ * Performance-first, mobile-safe looping video.
+ * - src attaches only when near viewport (saves bandwidth / decode)
+ * - muted/playsInline set as DOM *properties* so iOS actually autoplays
  * - plays only while visible, pauses when scrolled away
- * - poster shown until first frame; fades in
+ * - poster shown until first frame; retries play on user interaction if blocked
  */
 export default function LazyVideo({
   src, poster, className = '', style, objectPosition = 'center',
@@ -12,25 +14,29 @@ export default function LazyVideo({
 }) {
   const ref = useRef(null)
   const wrapRef = useRef(null)
+  const visible = useRef(false)
   const [load, setLoad] = useState(eager)
   const [ready, setReady] = useState(false)
+
+  // configure the element for autoplay the moment it mounts
+  useEffect(() => { if (ref.current) prime(ref.current) }, [load])
 
   useEffect(() => {
     const wrap = wrapRef.current
     if (!wrap) return
     const io = new IntersectionObserver(
       (entries) => {
-        entries.forEach((e) => {
-          const v = ref.current
-          if (e.isIntersecting) {
-            setLoad(true)
-            if (v && v.readyState >= 2) v.play().catch(() => {})
-          } else if (v) {
-            v.pause()
-          }
-        })
+        const e = entries[0]
+        visible.current = e.isIntersecting
+        const v = ref.current
+        if (e.isIntersecting) {
+          setLoad(true)
+          if (v) tryPlay(v)
+        } else if (v) {
+          v.pause()
+        }
       },
-      { rootMargin: '200px 0px', threshold: 0.01 }
+      { rootMargin: '250px 0px', threshold: 0.01 }
     )
     io.observe(wrap)
     return () => io.disconnect()
@@ -52,8 +58,13 @@ export default function LazyVideo({
           style={{ objectPosition, opacity: ready ? 1 : 0, transition: 'opacity .7s ease' }}
           src={src}
           poster={poster}
-          muted playsInline loop autoPlay preload="metadata"
-          onLoadedData={(e) => { setReady(true); e.currentTarget.play().catch(() => {}) }}
+          muted
+          loop
+          autoPlay
+          playsInline
+          preload="metadata"
+          onLoadedData={(e) => { setReady(true); if (visible.current) tryPlay(e.currentTarget) }}
+          onCanPlay={(e) => { if (visible.current) tryPlay(e.currentTarget) }}
         />
       )}
       {overlay && <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25" />}
