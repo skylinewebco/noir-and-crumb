@@ -39,7 +39,13 @@ export default function Featured() {
         <div ref={imgWrap} className="relative order-1 lg:order-none" data-reveal>
           <div className="absolute -inset-6 rounded-[40px] cookie-surface -z-10" />
           <div className="relative aspect-[4/5] rounded-[32px] overflow-hidden cookie-surface grid place-items-center">
-            <img src="./assets/img/featured.webp" alt={signature.name} className="w-full h-full object-cover will-change-transform" />
+            <img
+              src="./assets/img/featured.webp"
+              srcSet="./assets/img/featured-sm.webp 800w, ./assets/img/featured.webp 1400w"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              alt={signature.name} loading="lazy" decoding="async"
+              className="w-full h-full object-cover will-change-transform"
+            />
             <img src="./assets/img/glow.webp" alt="" className="screen-glow absolute -bottom-1/4 left-1/2 -translate-x-1/2 w-[140%] max-w-none opacity-60" />
           </div>
           <div className="absolute -bottom-5 -left-3 sm:left-6 glass rounded-2xl px-5 py-4 shadow-[var(--shadow)]">

@@ -34,7 +34,7 @@ export default function Gifting() {
   return (
     <section id="gifting" className="relative py-24 sm:py-32 overflow-hidden">
       <div className="absolute inset-0 -z-10">
-        <img src="./assets/img/bg-slate.webp" alt="" className="w-full h-full object-cover opacity-90" />
+        <img src="./assets/img/bg-slate.webp" srcSet="./assets/img/bg-slate-sm.webp 1100w, ./assets/img/bg-slate.webp 2000w" sizes="100vw" alt="" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-90" />
         <div className="absolute inset-0 bg-[#0b0908]/82" />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(var(--bg), transparent 14%, transparent 86%, var(--bg))' }} />
       </div>
@@ -66,9 +66,9 @@ export default function Gifting() {
         {/* box images */}
         <div data-reveal className="relative">
           <div ref={boxRef} className="relative will-change-transform">
-            <img src="./assets/img/box-open.webp" alt="Signature gift box, open" className="w-full drop-shadow-[0_40px_60px_rgba(0,0,0,0.6)]" />
+            <img src="./assets/img/box-open.webp" alt="Signature gift box, open" loading="lazy" decoding="async" className="w-full drop-shadow-[0_40px_60px_rgba(0,0,0,0.6)]" />
           </div>
-          <img src="./assets/img/box-closed.webp" alt="" className="absolute -bottom-4 -left-2 w-1/2 max-w-[220px] drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)] rotate-[-6deg]" />
+          <img src="./assets/img/box-closed.webp" alt="" loading="lazy" decoding="async" className="absolute -bottom-4 -left-2 w-1/2 max-w-[220px] drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)] rotate-[-6deg]" />
         </div>
       </div>
     </section>

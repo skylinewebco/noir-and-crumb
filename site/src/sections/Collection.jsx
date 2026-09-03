@@ -39,7 +39,8 @@ function Card({ p }) {
       {/* image */}
       <div className="relative aspect-square grid place-items-center overflow-hidden">
         <img
-          src={p.img} alt={p.name} loading="lazy"
+          src={p.img} srcSet={`${p.thumb} 620w, ${p.img} 1200w`} sizes="(max-width: 1024px) 45vw, 30vw"
+          alt={p.name} loading="lazy" decoding="async"
           className="w-[88%] object-contain transition-transform duration-700 ease-luxe group-hover:scale-[1.07] group-hover:rotate-2"
         />
         <img src="./assets/img/glow.webp" alt="" className="screen-glow absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-40 transition-opacity duration-700" />

@@ -1,18 +1,54 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect, useRef, lazy, Suspense } from 'react'
 import { useStore } from './store/useStore'
 import { initSmoothScroll, ScrollTrigger } from './lib/smooth'
+import { useReducedMotion } from './hooks'
 
-import Layout from './components/Layout'
-import Home from './pages/Home'
-import Shop from './pages/Shop'
-import About from './pages/About'
-import Experience from './pages/Experience'
-import ContactPage from './pages/ContactPage'
+const CookieField = lazy(() => import('./three/CookieField'))
+
+import Preloader from './components/Preloader'
+import Navbar from './components/Navbar'
+import Toasts from './components/Toasts'
+import CartDrawer from './components/CartDrawer'
+import ProductModal from './components/ProductModal'
+import AuthModal from './components/AuthModal'
+import CheckoutModal from './components/CheckoutModal'
+
+import Hero from './sections/Hero'
+import Marquee from './sections/Marquee'
+import Featured from './sections/Featured'
+import Collection from './sections/Collection'
+import Ingredients from './sections/Ingredients'
+import Story from './sections/Story'
+import Cinematic from './sections/Cinematic'
+import Gifting from './sections/Gifting'
+import Reviews from './sections/Reviews'
+import Contact from './sections/Contact'
+import Footer from './sections/Footer'
+
+function ProgressBar() {
+  const ref = useRef(null)
+  useEffect(() => {
+    let ticking = false
+    const paint = () => {
+      ticking = false
+      const doc = document.documentElement
+      const max = doc.scrollHeight - doc.clientHeight
+      const p = max > 0 ? Math.min(1, window.scrollY / max) : 0
+      if (ref.current) ref.current.style.transform = `scaleX(${p})`
+    }
+    const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(paint) } }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    paint()
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll) }
+  }, [])
+  return <div className="fixed top-0 left-0 right-0 z-[55] h-[2px] origin-left bg-[var(--accent)]" style={{ transform: 'scaleX(0)' }} ref={ref} />
+}
 
 export default function App() {
   const theme = useStore((s) => s.theme)
   const ready = useStore((s) => s.ready)
+  const reduced = useReducedMotion()
 
   // theme -> <html> class
   useEffect(() => {
@@ -39,17 +75,37 @@ export default function App() {
   }, [ready])
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/experience" element={<Experience />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="*" element={<Home />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <>
+      <Preloader />
+      {/* travelling 3D cookie lives in the hero and glides down the page on scroll */}
+      {ready && !reduced && (
+        <Suspense fallback={null}><CookieField /></Suspense>
+      )}
+      <div className="grain-overlay" aria-hidden />
+      <ProgressBar />
+      <Navbar />
+
+      {/* one continuous scroll: Hero -> Products -> Flavours -> Story -> ... -> Footer */}
+      <main>
+        <Hero />
+        <Marquee />
+        <Featured />
+        <Collection />
+        <Ingredients />
+        <Story />
+        <Cinematic />
+        <Gifting />
+        <Reviews />
+        <Contact />
+      </main>
+      <Footer />
+
+      {/* overlays */}
+      <CartDrawer />
+      <ProductModal />
+      <AuthModal />
+      <CheckoutModal />
+      <Toasts />
+    </>
   )
 }

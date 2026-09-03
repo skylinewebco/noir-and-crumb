@@ -14,7 +14,6 @@
     "lenis": "1.1.17",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-router-dom": "^6.26.2",
     "three": "0.169.0",
     "zustand": "4.5.5"
   },

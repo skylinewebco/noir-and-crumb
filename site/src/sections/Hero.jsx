@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import { scrollTo } from '../lib/smooth'
 import { Icon } from '../components/primitives'
@@ -8,7 +7,6 @@ import { prime, tryPlay } from '../lib/video'
 import CookieTouchZone from '../components/CookieTouchZone'
 
 export default function Hero() {
-  const navigate = useNavigate()
   const ready = useStore((s) => s.ready)
   const reduced = useReducedMotion()
   const [shown, setShown] = useState(false)
@@ -23,7 +21,12 @@ export default function Hero() {
     <section id="top" className={`hero-root relative min-h-[100svh] flex items-center overflow-hidden ${shown ? 'shown' : ''}`}>
       {/* atmospheric background (always dark cinematic) */}
       <div className="absolute inset-0 -z-10 bg-[#0a0806]">
-        <img src="./assets/img/bg-studio.webp" alt="" className="w-full h-full object-cover opacity-90" />
+        <img
+          src="./assets/img/bg-studio.webp"
+          srcSet="./assets/img/bg-studio-sm.webp 1100w, ./assets/img/bg-studio.webp 2000w" sizes="100vw"
+          alt="" fetchPriority="high" decoding="async"
+          className="w-full h-full object-cover opacity-90"
+        />
         <video
           ref={(el) => { if (el) { prime(el); tryPlay(el) } }}
           className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-screen"
@@ -61,7 +64,7 @@ export default function Hero() {
               Premium ingredients. Bold, quiet flavour. Each cookie pulled warm from the oven and shipped within the day.
             </p>
             <div className="flex flex-wrap items-center gap-3 mt-9">
-              <button onClick={() => navigate('/shop')} className="hero-fade btn btn-primary pointer-events-auto" style={{ transitionDelay: '.42s' }}>
+              <button onClick={() => scrollTo('#collection')} className="hero-fade btn btn-primary pointer-events-auto" style={{ transitionDelay: '.42s' }}>
                 Shop Cookies <Icon.Arrow width={16} height={16} />
               </button>
               <button onClick={() => scrollTo('#featured')} className="hero-fade btn btn-ghost pointer-events-auto !text-cream-100 border-white/20" style={{ transitionDelay: '.5s' }}>

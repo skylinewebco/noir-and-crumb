@@ -36,7 +36,8 @@ export default function LazyVideo({
           v.pause()
         }
       },
-      { rootMargin: '250px 0px', threshold: 0.01 }
+      // start fetching well before it enters view so it appears instantly, no wait
+      { rootMargin: '600px 0px', threshold: 0.01 }
     )
     io.observe(wrap)
     return () => io.disconnect()
@@ -62,7 +63,9 @@ export default function LazyVideo({
           loop
           autoPlay
           playsInline
-          preload="metadata"
+          preload="auto"
+          disablePictureInPicture
+          disableRemotePlayback
           onLoadedData={(e) => { setReady(true); if (visible.current) tryPlay(e.currentTarget) }}
           onCanPlay={(e) => { if (visible.current) tryPlay(e.currentTarget) }}
         />
